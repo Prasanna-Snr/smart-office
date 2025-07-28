@@ -17,31 +17,31 @@ class UserManagementScreen extends StatefulWidget {
 class _UserManagementScreenState extends State<UserManagementScreen> {
   List<User> users = [];
   bool isLoading = true;
+  bool isServerOnline = true;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _checkServerAndLoadUsers();
   }
 
-  Future<void> _checkServerStatus() async {
-    _showLoadingDialog('Checking server status...');
+  Future<void> _checkServerAndLoadUsers() async {
+    // Check server status first
+    final serverStatus = await FaceLockService.checkServerStatus();
+    setState(() {
+      isServerOnline = serverStatus;
+    });
     
-    try {
-      final isOnline = await FaceLockService.checkServerStatus();
-      _closeLoadingDialog();
-      
-      if (isOnline) {
-        _showSuccessSnackBar('✅ Face Lock API server is online and responding');
-      } else {
-        _showErrorSnackBar('❌ Face Lock API server is offline or not responding');
-      }
-    } catch (e) {
-      _closeLoadingDialog();
-      _showErrorSnackBar('Failed to check server status: $e');
+    if (serverStatus) {
+      _loadUsers();
+    } else {
+      setState(() => isLoading = false);
+      _showErrorSnackBar('Server is currently offline. Please try again later.');
     }
   }
+
+
 
   Future<void> _loadUsers() async {
     try {
@@ -70,13 +70,31 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       appBar: AppBar(
         title: const Text('User Management'),
         actions: [
-          IconButton(
-            onPressed: _checkServerStatus,
-            icon: const Icon(Icons.wifi_find),
-            tooltip: 'Check Server Status',
+          // Server status indicator
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isServerOnline ? Icons.cloud_done : Icons.cloud_off,
+                  color: isServerOnline ? Colors.green : Colors.red,
+                  size: 20,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isServerOnline ? 'Online' : 'Offline',
+                  style: TextStyle(
+                    color: isServerOnline ? Colors.green : Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
           IconButton(
-            onPressed: _loadUsers,
+            onPressed: _checkServerAndLoadUsers,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
@@ -90,11 +108,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _showAddUserDialog(),
+                onPressed: isServerOnline ? () => _showAddUserDialog() : null,
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Take Photo & Add User'),
+                label: Text(isServerOnline ? 'Take Photo & Add User' : 'Server Offline'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: isServerOnline ? AppTheme.primaryColor : Colors.grey,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -106,11 +124,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _verifyFace,
+                onPressed: isServerOnline ? _verifyFace : null,
                 icon: const Icon(Icons.face),
-                label: const Text('Verify Face'),
+                label: Text(isServerOnline ? 'Verify Face' : 'Server Offline'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.successColor,
+                  backgroundColor: isServerOnline ? AppTheme.successColor : Colors.grey,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -234,7 +252,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 80,
+        imageQuality: 50, // Reduced from 80 to 50 to minimize file size
+        maxWidth: 800,    // Limit image dimensions
+        maxHeight: 800,   // Limit image dimensions
       );
       
       if (image != null) {
@@ -331,15 +351,139 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     } catch (e) {
       _closeLoadingDialog();
       
-      // Check if this is a duplicate face error
       String errorMessage = e.toString();
+      
+      // Check for specific error types
       if (errorMessage.contains('Face already registered for user:')) {
-        // Extract the existing username and similarity percentage
         _showDuplicateFaceDialog(errorMessage, name);
+      } else if (errorMessage.contains('Request timeout') || errorMessage.contains('502')) {
+        _showServerErrorDialog(name, imageFile);
+      } else if (errorMessage.contains('Network error') || errorMessage.contains('SocketException')) {
+        _showNetworkErrorDialog(name, imageFile);
       } else {
-        _showErrorSnackBar('Failed to register user: $e');
+        _showErrorSnackBar('Failed to register user: $errorMessage');
       }
     }
+  }
+
+  void _showServerErrorDialog(String name, File imageFile) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.security, color: Colors.orange, size: 28),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Server Issue',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'The server is currently overloaded or experiencing issues.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'This can happen when:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 8),
+            Text('• The server is processing other requests'),
+            Text('• The image file is too large'),
+            Text('• The server needs time to restart'),
+            SizedBox(height: 12),
+            Text(
+              'Please wait a moment and try again.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Retry after a short delay
+              Future.delayed(const Duration(seconds: 2), () {
+                _addUserWithPhoto(name, imageFile);
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNetworkErrorDialog(String name, File imageFile) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.wifi_off, color: Colors.red, size: 28),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Network Error',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Unable to connect to the server.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Please check:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 8),
+            Text('• Your internet connection'),
+            Text('• Server availability'),
+            Text('• Try again in a few moments'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _addUserWithPhoto(name, imageFile);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDuplicateFaceDialog(String errorMessage, String attemptedName) {
@@ -377,7 +521,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             const Icon(Icons.warning, color: Colors.orange, size: 28),
             const SizedBox(width: 8),
-            const Text('User Already Registered'),
+            const Flexible(
+              child: Text(
+                'Already Registered',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -407,7 +556,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       const Icon(Icons.person, size: 16, color: Colors.orange),
                       const SizedBox(width: 6),
                       const Text('Existing User: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                      Text(existingUser, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Flexible(
+                        child: Text(
+                          existingUser, 
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -416,7 +571,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       const Icon(Icons.analytics, size: 16, color: Colors.orange),
                       const SizedBox(width: 6),
                       const Text('Face Match: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                      Text(similarity, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Flexible(
+                        child: Text(
+                          similarity, 
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -499,7 +660,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 80,
+        imageQuality: 50, // Reduced quality to minimize file size
+        maxWidth: 800,    // Limit image dimensions
+        maxHeight: 800,   // Limit image dimensions
       );
       
       if (image != null) {
@@ -684,7 +847,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             const Icon(Icons.check_circle, color: AppTheme.successColor),
             const SizedBox(width: 8),
-            Text(title),
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(message),
@@ -706,7 +874,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           children: [
             const Icon(Icons.error, color: AppTheme.errorColor),
             const SizedBox(width: 8),
-            Text(title),
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(message),
@@ -719,4 +892,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
     );
   }
+
+
 }
