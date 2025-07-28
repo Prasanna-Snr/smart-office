@@ -4,6 +4,7 @@ import '../providers/office_provider.dart';
 import '../widgets/camera_view.dart';
 import '../widgets/gas_detector.dart';
 import '../theme/app_theme.dart';
+import '../services/face_lock_service.dart';
 import 'user_management_screen.dart';
 
 
@@ -15,6 +16,40 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int realTimeUserCount = 0;
+  bool isLoadingUserCount = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRealTimeUserCount();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh user count when returning to this screen
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      _loadRealTimeUserCount();
+    }
+  }
+
+  Future<void> _loadRealTimeUserCount() async {
+    try {
+      final users = await FaceLockService.getAllUsers();
+      setState(() {
+        realTimeUserCount = users.length;
+        isLoadingUserCount = false;
+      });
+    } catch (e) {
+      print('Error loading user count: $e');
+      setState(() {
+        realTimeUserCount = 0;
+        isLoadingUserCount = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<OfficeProvider>(
@@ -242,15 +277,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Total Users',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    Row(
+                                      children: [
+                                        const Text(
+                                          'Total Users',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (isLoadingUserCount)
+                                          const SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                     Text(
-                                      '${officeProvider.totalUsers} registered users',
+                                      isLoadingUserCount 
+                                          ? 'Loading...' 
+                                          : '$realTimeUserCount registered users',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey[600],
@@ -259,14 +309,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                               ),
-                              Text(
-                                '${officeProvider.totalUsers}',
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryColor,
-                                ),
-                              ),
+                              isLoadingUserCount
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      '$realTimeUserCount',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
                             ],
                           ),
                         ],
@@ -413,14 +471,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.people),
             title: const Text('User Management'),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const UserManagementScreen(),
                 ),
               );
+              // Refresh user count when returning from User Management
+              _loadRealTimeUserCount();
             },
           ),
 

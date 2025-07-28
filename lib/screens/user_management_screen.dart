@@ -224,14 +224,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                         ),
                                       ),
                                       
-                                      // Delete Button
-                                      IconButton(
-                                        onPressed: () => _deleteUser(user.id),
-                                        icon: const Icon(
-                                          Icons.delete,
-                                          color: Colors.red,
-                                        ),
-                                        tooltip: 'Delete User',
+                                      // Edit and Delete Buttons
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            onPressed: () => _showEditUserDialog(user),
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                            tooltip: 'Edit Name',
+                                          ),
+                                          IconButton(
+                                            onPressed: () => _deleteUser(user.id),
+                                            icon: const Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                            ),
+                                            tooltip: 'Delete User',
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -264,6 +277,112 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     } catch (e) {
       _showErrorSnackBar('Failed to access camera: $e');
     }
+  }
+
+  void _showEditUserDialog(User user) {
+    final nameController = TextEditingController(text: user.name);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.edit, color: AppTheme.primaryColor, size: 28),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Edit User Name',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Show user image
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(color: AppTheme.primaryColor, width: 2),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(38),
+                child: _buildUserImage(user),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Current name: ${user.name}',
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'New Name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+                hintText: 'Enter new name',
+              ),
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, size: 16, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  const Flexible(
+                    child: Text(
+                      'Face data will be preserved during name change',
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty && newName != user.name) {
+                Navigator.pop(context);
+                _updateUserName(user, newName);
+              } else if (newName == user.name) {
+                Navigator.pop(context);
+                _showErrorSnackBar('Name is the same as current name');
+              } else {
+                _showErrorSnackBar('Please enter a valid name');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNameInputDialog(File imageFile) {
@@ -334,6 +453,96 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
 
+
+  Future<void> _updateUserName(User user, String newName) async {
+    // Check if user has face data
+    if (user.imageBase64 == null || user.imageBase64!.isEmpty) {
+      _showErrorSnackBar('Cannot update user without face data. Please delete and re-register.');
+      return;
+    }
+
+    _showLoadingDialog('Updating user name...');
+    
+    try {
+      // Update user name using the API
+      await FaceLockService.updateUserName(
+        oldUsername: user.name,
+        newUsername: newName,
+        imageBase64: user.imageBase64!,
+      );
+      
+      _closeLoadingDialog();
+      _showSuccessSnackBar('User name updated from "${user.name}" to "$newName"!');
+      await _loadUsers(); // Refresh the list
+    } catch (e) {
+      _closeLoadingDialog();
+      
+      String errorMessage = e.toString();
+      
+      // Check for specific error types
+      if (errorMessage.contains('Face already registered for user:')) {
+        _showErrorDialog(
+          'Update Failed', 
+          'A user with this face already exists with a different name. Cannot update.'
+        );
+      } else if (errorMessage.contains('Request timeout') || errorMessage.contains('502')) {
+        _showUpdateRetryDialog(user, newName);
+      } else if (errorMessage.contains('Network error') || errorMessage.contains('SocketException')) {
+        _showUpdateRetryDialog(user, newName);
+      } else {
+        _showErrorSnackBar('Failed to update user name: $errorMessage');
+      }
+    }
+  }
+
+  void _showUpdateRetryDialog(User user, String newName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.orange, size: 28),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Update Failed',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Failed to update "${user.name}" to "$newName"'),
+            const SizedBox(height: 12),
+            const Text(
+              'This could be due to server issues or network problems.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateUserName(user, newName);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _addUserWithPhoto(String name, File imageFile) async {
     _showLoadingDialog('Registering user with face...');
@@ -674,12 +883,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           
           if (result['authenticated'] == true) {
             _showSuccessDialog(
-              'Authentication Successful!', 
+              'Authentication \nSuccessful!',
               'Welcome ${result['username']}!\nAccuracy: ${result['accuracy']}%'
             );
           } else {
             _showErrorDialog(
-              'Authentication Failed', 
+              'Authentication \nFailed',
               'Face not recognized.\nBest match: ${result['best_match'] ?? 'None'}\nAccuracy: ${result['accuracy']}%'
             );
           }

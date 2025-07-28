@@ -133,8 +133,57 @@ class FaceLockService {
     throw Exception('This API does not support separate user creation. Use registerUser with image instead.');
   }
   
-  // Note: This API does not support updating users
-  // Users must be deleted and re-registered to change information
+  // Note: This API does not support updating users directly
+  // We implement update by deleting and re-registering with the same face data
+  static Future<Map<String, dynamic>> updateUserName({
+    required String oldUsername,
+    required String newUsername,
+    required String imageBase64,
+  }) async {
+    try {
+      // First, delete the old user
+      final deleteSuccess = await deleteUser(oldUsername);
+      if (!deleteSuccess) {
+        throw Exception('Failed to delete old user record');
+      }
+      
+      // Convert base64 back to image bytes for re-registration
+      String base64String = imageBase64;
+      if (base64String.contains(',')) {
+        base64String = base64String.split(',').last;
+      }
+      
+      List<int> imageBytes = base64Decode(base64String);
+      
+      // Create a temporary file from the base64 data
+      final tempDir = Directory.systemTemp;
+      final tempFile = File('${tempDir.path}/temp_face_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(imageBytes);
+      
+      try {
+        // Re-register with new username
+        final result = await registerUser(
+          username: newUsername,
+          imageFile: tempFile,
+        );
+        
+        // Clean up temp file
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+        
+        return result;
+      } catch (e) {
+        // Clean up temp file on error
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+        rethrow;
+      }
+    } catch (e) {
+      throw Exception('Failed to update user name: $e');
+    }
+  }
   
   // Delete user (matches the actual API)
   static Future<bool> deleteUser(String username) async {
