@@ -143,7 +143,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   : users.isEmpty
                       ? const Center(
                           child: Text(
-                            'No users found.\nTap "Add New User" to get started.',
+                            'No users found.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
