@@ -197,11 +197,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Office Lights Control
+                  // Office Lights Control (Firebase Connected)
                   Card(
                     child: SwitchListTile.adaptive(
                       value: officeProvider.isLightOn,
-                      onChanged: (value) => officeProvider.toggleLight(),
+                      onChanged: (value) async {
+                        try {
+                          await officeProvider.toggleLight();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to toggle light. Please try again.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                       title: const Text('Office Lights'),
                       subtitle: Text(
                         officeProvider.isLightOn ? 'Currently ON' : 'Currently OFF',

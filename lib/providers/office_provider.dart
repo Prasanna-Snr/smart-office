@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/office_state.dart';
+import '../services/firebase_service.dart';
 
 class OfficeProvider extends ChangeNotifier {
   OfficeState _officeState = OfficeState();
+  StreamSubscription<bool>? _ledStatusSubscription;
 
   OfficeState get officeState => _officeState;
 
@@ -12,6 +15,37 @@ class OfficeProvider extends ChangeNotifier {
   bool get gasDetected => _officeState.gasDetected;
   int get totalUsers => _officeState.totalUsers;
   double get roomTemperature => _officeState.roomTemperature;
+
+  OfficeProvider() {
+    _initializeFirebaseListener();
+    _loadInitialLedStatus();
+  }
+
+  // Initialize Firebase listener for LED status
+  void _initializeFirebaseListener() {
+    _ledStatusSubscription = FirebaseService.ledStatusStream().listen(
+      (bool status) {
+        if (_officeState.isLightOn != status) {
+          _officeState.isLightOn = status;
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        print('Error listening to LED status: $error');
+      },
+    );
+  }
+
+  // Load initial LED status from Firebase
+  Future<void> _loadInitialLedStatus() async {
+    try {
+      final status = await FirebaseService.getLedStatus();
+      _officeState.isLightOn = status;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading initial LED status: $e');
+    }
+  }
 
   void toggleDoor() {
     _officeState.isDoorOpen = !_officeState.isDoorOpen;
@@ -25,11 +59,23 @@ class OfficeProvider extends ChangeNotifier {
     }
   }
 
-  void toggleLight() {
-    _officeState.isLightOn = !_officeState.isLightOn;
-    // Simulate temperature change when lights are on/off
-    _officeState.roomTemperature += _officeState.isLightOn ? 0.5 : -0.5;
-    notifyListeners();
+  Future<void> toggleLight() async {
+    try {
+      final newStatus = !_officeState.isLightOn;
+      // Update Firebase first
+      await FirebaseService.updateLedStatus(newStatus);
+      
+      // Update local state (this will also be updated by the Firebase listener)
+      _officeState.isLightOn = newStatus;
+      
+      // Simulate temperature change when lights are on/off
+      _officeState.roomTemperature += _officeState.isLightOn ? 0.5 : -0.5;
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error toggling light: $e');
+      // Show error to user or handle gracefully
+    }
   }
 
   void toggleFan() {
@@ -57,5 +103,11 @@ class OfficeProvider extends ChangeNotifier {
   void updateRoomTemperature(double temperature) {
     _officeState.roomTemperature = temperature;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ledStatusSubscription?.cancel();
+    super.dispose();
   }
 }

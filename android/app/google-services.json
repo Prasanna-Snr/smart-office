@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "182108935411",
+    "firebase_url": "https://iotproject-403ba-default-rtdb.firebaseio.com",
+    "project_id": "iotproject-403ba",
+    "storage_bucket": "iotproject-403ba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:182108935411:android:749f54b3c71d4a8ceb5386",
+        "android_client_info": {
+          "package_name": "com.example.smart_office"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGvq6cW8OMDiWIC1TnQFB96NucnBVX5xA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
