@@ -6,6 +6,7 @@ import '../services/firebase_service.dart';
 class OfficeProvider extends ChangeNotifier {
   OfficeState _officeState = OfficeState();
   StreamSubscription<bool>? _ledStatusSubscription;
+  StreamSubscription<double>? _temperatureSubscription;
 
   OfficeState get officeState => _officeState;
 
@@ -17,12 +18,13 @@ class OfficeProvider extends ChangeNotifier {
   double get roomTemperature => _officeState.roomTemperature;
 
   OfficeProvider() {
-    _initializeFirebaseListener();
-    _loadInitialLedStatus();
+    _initializeFirebaseListeners();
+    _loadInitialData();
   }
 
-  // Initialize Firebase listener for LED status
-  void _initializeFirebaseListener() {
+  // Initialize Firebase listeners for LED status and temperature
+  void _initializeFirebaseListeners() {
+    // LED status listener
     _ledStatusSubscription = FirebaseService.ledStatusStream().listen(
       (bool status) {
         if (_officeState.isLightOn != status) {
@@ -34,16 +36,35 @@ class OfficeProvider extends ChangeNotifier {
         print('Error listening to LED status: $error');
       },
     );
+
+    // Temperature listener
+    _temperatureSubscription = FirebaseService.temperatureStream().listen(
+      (double temperature) {
+        if (_officeState.roomTemperature != temperature) {
+          _officeState.roomTemperature = temperature;
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        print('Error listening to temperature: $error');
+      },
+    );
   }
 
-  // Load initial LED status from Firebase
-  Future<void> _loadInitialLedStatus() async {
+  // Load initial data from Firebase
+  Future<void> _loadInitialData() async {
     try {
+      // Load LED status
       final status = await FirebaseService.getLedStatus();
       _officeState.isLightOn = status;
+      
+      // Load temperature
+      final temperature = await FirebaseService.getTemperature();
+      _officeState.roomTemperature = temperature;
+      
       notifyListeners();
     } catch (e) {
-      print('Error loading initial LED status: $e');
+      print('Error loading initial data: $e');
     }
   }
 
@@ -68,9 +89,6 @@ class OfficeProvider extends ChangeNotifier {
       // Update local state (this will also be updated by the Firebase listener)
       _officeState.isLightOn = newStatus;
       
-      // Simulate temperature change when lights are on/off
-      _officeState.roomTemperature += _officeState.isLightOn ? 0.5 : -0.5;
-      
       notifyListeners();
     } catch (e) {
       print('Error toggling light: $e');
@@ -80,8 +98,6 @@ class OfficeProvider extends ChangeNotifier {
 
   void toggleFan() {
     _officeState.isFanOn = !_officeState.isFanOn;
-    // Simulate temperature change when fan is on/off
-    _officeState.roomTemperature += _officeState.isFanOn ? -1.0 : 1.0;
     notifyListeners();
   }
 
@@ -108,6 +124,7 @@ class OfficeProvider extends ChangeNotifier {
   @override
   void dispose() {
     _ledStatusSubscription?.cancel();
+    _temperatureSubscription?.cancel();
     super.dispose();
   }
 }
