@@ -2,17 +2,24 @@ import 'package:firebase_database/firebase_database.dart';
 
 class FirebaseService {
   static final DatabaseReference _database = FirebaseDatabase.instance.ref();
-  
+
   // Reference to the led_status in Firebase
   static DatabaseReference get ledStatusRef => _database.child('led_status');
-  
+
   // Reference to the temperature in Firebase
   static DatabaseReference get temperatureRef => _database.child('temperature');
-  
+
   // Reference to the humidity in Firebase
   static DatabaseReference get humidityRef => _database.child('humidity');
-  
-  // Update LED status in Firebase
+
+  // Reference to the garbage level in Firebase
+  static DatabaseReference get garbageLevelRef => _database.child('garbage_level');
+
+  // 🔹 Reference to the door status in Firebase
+  static DatabaseReference get doorStatusRef => _database.child('door_status');
+
+
+  // ───────────────── LED ─────────────────
   static Future<void> updateLedStatus(bool status) async {
     try {
       await ledStatusRef.set(status);
@@ -22,8 +29,7 @@ class FirebaseService {
       throw e;
     }
   }
-  
-  // Get current LED status from Firebase
+
   static Future<bool> getLedStatus() async {
     try {
       final snapshot = await ledStatusRef.get();
@@ -36,8 +42,7 @@ class FirebaseService {
       return false;
     }
   }
-  
-  // Listen to LED status changes in real-time
+
   static Stream<bool> ledStatusStream() {
     return ledStatusRef.onValue.map((event) {
       if (event.snapshot.exists) {
@@ -46,8 +51,8 @@ class FirebaseService {
       return false;
     });
   }
-  
-  // Get current temperature from Firebase
+
+  // ───────────────── Temperature ─────────────────
   static Future<double> getTemperature() async {
     try {
       final snapshot = await temperatureRef.get();
@@ -63,8 +68,7 @@ class FirebaseService {
       return 22.0;
     }
   }
-  
-  // Listen to temperature changes in real-time
+
   static Stream<double> temperatureStream() {
     return temperatureRef.onValue.map((event) {
       if (event.snapshot.exists) {
@@ -73,11 +77,11 @@ class FirebaseService {
           return value.toDouble();
         }
       }
-      return 22.0; // Default temperature
+      return 22.0;
     });
   }
-  
-  // Get current humidity from Firebase
+
+  // ───────────────── Humidity ─────────────────
   static Future<double> getHumidity() async {
     try {
       final snapshot = await humidityRef.get();
@@ -93,8 +97,7 @@ class FirebaseService {
       return 50.0;
     }
   }
-  
-  // Listen to humidity changes in real-time
+
   static Stream<double> humidityStream() {
     return humidityRef.onValue.map((event) {
       if (event.snapshot.exists) {
@@ -103,7 +106,79 @@ class FirebaseService {
           return value.toDouble();
         }
       }
-      return 50.0; // Default humidity
+      return 50.0;
+    });
+  }
+
+  // ───────────────── Garbage Level ─────────────────
+  static Future<void> updateGarbageLevel(double level) async {
+    try {
+      await garbageLevelRef.set(level);
+      print('Garbage level updated to: $level%');
+    } catch (e) {
+      print('Error updating garbage level: $e');
+      throw e;
+    }
+  }
+
+  static Future<double> getGarbageLevel() async {
+    try {
+      final snapshot = await garbageLevelRef.get();
+      if (snapshot.exists) {
+        final value = snapshot.value;
+        if (value is num) {
+          return value.toDouble();
+        }
+      }
+      return 45.0;
+    } catch (e) {
+      print('Error getting garbage level: $e');
+      return 45.0;
+    }
+  }
+
+  static Stream<double> garbageLevelStream() {
+    return garbageLevelRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        final value = event.snapshot.value;
+        if (value is num) {
+          return value.toDouble();
+        }
+      }
+      return 45.0;
+    });
+  }
+
+  // ───────────────── Door Status ─────────────────
+  static Future<void> updateDoorStatus(bool isOpen) async {
+    try {
+      await doorStatusRef.set(isOpen);
+      print('Door status updated to: ${isOpen ? "OPEN" : "CLOSED"}');
+    } catch (e) {
+      print('Error updating door status: $e');
+      throw e;
+    }
+  }
+
+  static Future<bool> getDoorStatus() async {
+    try {
+      final snapshot = await doorStatusRef.get();
+      if (snapshot.exists) {
+        return snapshot.value as bool? ?? false;
+      }
+      return false; // Default closed
+    } catch (e) {
+      print('Error getting door status: $e');
+      return false;
+    }
+  }
+
+  static Stream<bool> doorStatusStream() {
+    return doorStatusRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        return event.snapshot.value as bool? ?? false;
+      }
+      return false;
     });
   }
 }

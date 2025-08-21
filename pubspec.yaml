@@ -39,8 +39,10 @@ dependencies:
   google_fonts: ^6.2.1
   image_picker: ^1.0.4
   http: ^1.1.0
+  http_parser: ^4.0.2
   firebase_core: ^4.0.0
   firebase_database: ^12.0.0
+  syncfusion_flutter_gauges: ^27.1.48
 
 dev_dependencies:
   flutter_test:

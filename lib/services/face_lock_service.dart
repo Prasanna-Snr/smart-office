@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http_parser;
-import 'package:flutter/services.dart';
+import '../core/constants/app_constants.dart';
+import '../core/utils/image_utils.dart';
 
 class FaceLockService {
   static const String baseUrl = 'https://face-lock-api.onrender.com';
@@ -14,7 +14,7 @@ class FaceLockService {
       final response = await http.get(
         Uri.parse(baseUrl),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(AppConstants.serverCheckTimeout);
       
       print('Server status check: ${response.statusCode}');
       return response.statusCode == 200;
@@ -85,10 +85,10 @@ class FaceLockService {
       
       print('Original image size: ${imageBytes.length} bytes');
       
-      // Compress image if it's too large (limit to ~300KB)
-      if (imageBytes.length > 300000) {
+      // Compress image if it's too large
+      if (imageBytes.length > AppConstants.maxImageSize) {
         print('Image too large (${imageBytes.length} bytes), compressing...');
-        imageBytes = await _compressImage(imageBytes);
+        imageBytes = await ImageUtils.compressImage(imageBytes);
         print('Compressed image size: ${imageBytes.length} bytes');
       }
       
@@ -147,18 +147,8 @@ class FaceLockService {
         throw Exception('Failed to delete old user record');
       }
       
-      // Convert base64 back to image bytes for re-registration
-      String base64String = imageBase64;
-      if (base64String.contains(',')) {
-        base64String = base64String.split(',').last;
-      }
-      
-      List<int> imageBytes = base64Decode(base64String);
-      
       // Create a temporary file from the base64 data
-      final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/temp_face_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await tempFile.writeAsBytes(imageBytes);
+      final tempFile = await ImageUtils.createTempFileFromBase64(imageBase64);
       
       try {
         // Re-register with new username
@@ -168,16 +158,12 @@ class FaceLockService {
         );
         
         // Clean up temp file
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
+        await ImageUtils.deleteTempFile(tempFile);
         
         return result;
       } catch (e) {
         // Clean up temp file on error
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
+        await ImageUtils.deleteTempFile(tempFile);
         rethrow;
       }
     } catch (e) {
@@ -217,10 +203,10 @@ class FaceLockService {
       
       print('Original verification image size: ${imageBytes.length} bytes');
       
-      // Compress image if it's too large (limit to ~300KB)
-      if (imageBytes.length > 300000) {
+      // Compress image if it's too large
+      if (imageBytes.length > AppConstants.maxImageSize) {
         print('Verification image too large, compressing...');
-        imageBytes = await _compressImage(imageBytes);
+        imageBytes = await ImageUtils.compressImage(imageBytes);
         print('Compressed verification image size: ${imageBytes.length} bytes');
       }
       
@@ -258,26 +244,5 @@ class FaceLockService {
     }
   }
 
-  // Helper method to compress image bytes
-  static Future<List<int>> _compressImage(List<int> imageBytes) async {
-    try {
-      // For now, implement a simple size reduction by truncating if too large
-      // This is a fallback approach - ideally you'd use proper image compression
-      
-      const int maxSize = 250000; // 250KB limit
-      
-      if (imageBytes.length > maxSize) {
-        print('Truncating image from ${imageBytes.length} to $maxSize bytes');
-        // Take the first portion of the image data
-        // This is not ideal but will prevent server crashes
-        return imageBytes.take(maxSize).toList();
-      }
-      
-      return imageBytes;
-    } catch (e) {
-      print('Error compressing image: $e');
-      // Return original if compression fails
-      return imageBytes;
-    }
-  }
+
 }

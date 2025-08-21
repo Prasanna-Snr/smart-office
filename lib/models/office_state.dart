@@ -5,6 +5,7 @@ class OfficeState {
   bool gasDetected;
   int totalUsers;
   double roomTemperature; // in Celsius
+  double garbageLevel; // in percentage (0-100)
 
   OfficeState({
     this.isDoorOpen = false,
@@ -13,5 +14,6 @@ class OfficeState {
     this.gasDetected = false,
     this.totalUsers = 5,
     this.roomTemperature = 22.5,
+    this.garbageLevel = 45.0,
   });
 }
