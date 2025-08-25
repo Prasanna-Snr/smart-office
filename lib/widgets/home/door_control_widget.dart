@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/office_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../services/firebase_service.dart'; // ← adjust if your path differs
@@ -8,22 +10,25 @@ class DoorControlWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints.tightFor(
-        height: AppConstants.dashboardCardHeight,
-      ),
-      child: Card(
-        elevation: 1.5,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: StreamBuilder<bool>(
-            stream: FirebaseService.doorStatusStream(),
-            builder: (context, snapshot) {
-              final bool hasData = snapshot.hasData;
-              final bool isOpen = snapshot.data ?? false;
-              final Color statusColor =
-              isOpen ? AppTheme.successColor : Colors.red;
+    return Consumer<OfficeProvider>(
+      builder: (context, provider, child) {
+        return ConstrainedBox(
+          constraints: BoxConstraints.tightFor(
+            height: AppConstants.dashboardCardHeight,
+          ),
+          child: Card(
+            elevation: 1.5,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: StreamBuilder<bool>(
+                stream: FirebaseService.doorStatusStream(),
+                builder: (context, snapshot) {
+                  final bool hasData = snapshot.hasData;
+                  final bool isOpen = snapshot.data ?? false;
+                  final Color statusColor = provider.isAutomaticModeEnabled 
+                      ? Colors.grey 
+                      : (isOpen ? AppTheme.successColor : Colors.red);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,18 +37,19 @@ class DoorControlWidget extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        isOpen
-                            ? Icons.door_front_door
-                            : Icons.door_front_door_outlined,
+                        provider.isAutomaticModeEnabled 
+                            ? Icons.auto_mode 
+                            : (isOpen ? Icons.door_front_door : Icons.door_front_door_outlined),
                         size: 24,
                         color: statusColor,
                       ),
                       const SizedBox(width: 10),
-                      const Text(
+                      Text(
                         'Door Status',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
+                          color: provider.isAutomaticModeEnabled ? Colors.grey : null,
                         ),
                       ),
                     ],
@@ -76,9 +82,9 @@ class DoorControlWidget extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            hasData
-                                ? (isOpen ? 'OPEN' : 'CLOSED')
-                                : '…', // loading fallback
+                            provider.isAutomaticModeEnabled 
+                                ? 'AUTO MODE'
+                                : (hasData ? (isOpen ? 'OPEN' : 'CLOSED') : '…'),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
@@ -98,14 +104,15 @@ class DoorControlWidget extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: !hasData || isOpen
+                          onPressed: provider.isAutomaticModeEnabled || !hasData || isOpen
                               ? null
                               : () => FirebaseService.updateDoorStatus(true),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.successColor,
+                            backgroundColor: provider.isAutomaticModeEnabled 
+                                ? Colors.grey 
+                                : AppTheme.successColor,
                             foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                             textStyle: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -117,14 +124,15 @@ class DoorControlWidget extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: !hasData || !isOpen
+                          onPressed: provider.isAutomaticModeEnabled || !hasData || !isOpen
                               ? null
                               : () => FirebaseService.updateDoorStatus(false),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: provider.isAutomaticModeEnabled 
+                                ? Colors.grey 
+                                : Colors.red,
                             foregroundColor: Colors.white,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                             textStyle: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -135,12 +143,14 @@ class DoorControlWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 }

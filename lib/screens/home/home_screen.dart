@@ -12,6 +12,7 @@ import '../../theme/app_theme.dart';
 import '../../services/face_lock_service.dart';
 import '../staff/Staff_attendance_screen.dart';
 import '../user_management/user_management_screen.dart';
+import '../settings/settings_screen.dart';
 import '../../core/constants/app_constants.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -207,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
-            onTap: () => _showComingSoon(),
+            onTap: () => _navigateToSettings(),
           ),
         ],
       ),
@@ -232,11 +233,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-  void _showComingSoon() {
+  void _navigateToSettings() {
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings coming soon!')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
   }
 }

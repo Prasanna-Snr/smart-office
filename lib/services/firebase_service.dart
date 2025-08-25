@@ -18,6 +18,15 @@ class FirebaseService {
   // 🔹 Reference to the door status in Firebase
   static DatabaseReference get doorStatusRef => _database.child('door_status');
 
+  // Reference to the fan status in Firebase
+  static DatabaseReference get fanStatusRef => _database.child('fan_status');
+
+  // Reference to the automatic mode in Firebase
+  static DatabaseReference get automaticModeRef => _database.child('automatic_mode');
+
+  // Reference to the max temperature for automatic fan control
+  static DatabaseReference get maxTempRef => _database.child('max_temp');
+
 
   // ───────────────── LED ─────────────────
   static Future<void> updateLedStatus(bool status) async {
@@ -179,6 +188,111 @@ class FirebaseService {
         return event.snapshot.value as bool? ?? false;
       }
       return false;
+    });
+  }
+
+  // ───────────────── Fan Status ─────────────────
+  static Future<void> updateFanStatus(bool status) async {
+    try {
+      await fanStatusRef.set(status);
+      print('Fan status updated to: $status');
+    } catch (e) {
+      print('Error updating fan status: $e');
+      throw e;
+    }
+  }
+
+  static Future<bool> getFanStatus() async {
+    try {
+      final snapshot = await fanStatusRef.get();
+      if (snapshot.exists) {
+        return snapshot.value as bool? ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error getting fan status: $e');
+      return false;
+    }
+  }
+
+  static Stream<bool> fanStatusStream() {
+    return fanStatusRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        return event.snapshot.value as bool? ?? false;
+      }
+      return false;
+    });
+  }
+
+  // ───────────────── Automatic Mode ─────────────────
+  static Future<void> updateAutomaticMode(bool enabled) async {
+    try {
+      await automaticModeRef.set(enabled);
+      print('Automatic mode updated to: $enabled');
+    } catch (e) {
+      print('Error updating automatic mode: $e');
+      throw e;
+    }
+  }
+
+  static Future<bool> getAutomaticMode() async {
+    try {
+      final snapshot = await automaticModeRef.get();
+      if (snapshot.exists) {
+        return snapshot.value as bool? ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error getting automatic mode: $e');
+      return false;
+    }
+  }
+
+  static Stream<bool> automaticModeStream() {
+    return automaticModeRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        return event.snapshot.value as bool? ?? false;
+      }
+      return false;
+    });
+  }
+
+  // ───────────────── Max Temperature ─────────────────
+  static Future<void> updateMaxTemp(double temperature) async {
+    try {
+      await maxTempRef.set(temperature);
+      print('Max temperature updated to: $temperature°C');
+    } catch (e) {
+      print('Error updating max temperature: $e');
+      throw e;
+    }
+  }
+
+  static Future<double> getMaxTemp() async {
+    try {
+      final snapshot = await maxTempRef.get();
+      if (snapshot.exists) {
+        final value = snapshot.value;
+        if (value is num) {
+          return value.toDouble();
+        }
+      }
+      return 25.0; // Default temperature
+    } catch (e) {
+      print('Error getting max temperature: $e');
+      return 25.0;
+    }
+  }
+
+  static Stream<double> maxTempStream() {
+    return maxTempRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        final value = event.snapshot.value;
+        if (value is num) {
+          return value.toDouble();
+        }
+      }
+      return 25.0;
     });
   }
 }

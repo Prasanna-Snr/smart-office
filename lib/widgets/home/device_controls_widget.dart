@@ -16,7 +16,7 @@ class DeviceControlsWidget extends StatelessWidget {
             Card(
               child: SwitchListTile.adaptive(
                 value: provider.isLightOn,
-                onChanged: (value) async {
+                onChanged: provider.isAutomaticModeEnabled ? null : (value) async {
                   try {
                     await provider.toggleLight();
                   } catch (e) {
@@ -28,20 +28,27 @@ class DeviceControlsWidget extends StatelessWidget {
                     );
                   }
                 },
-                title: const Text('Office Lights'),
-                subtitle: Text(
-                  provider.isLightOn ? 'Currently ON' : 'Currently OFF',
+                title: Text(
+                  'Office Lights',
                   style: TextStyle(
-                    color: provider.isLightOn 
-                        ? AppTheme.successColor 
-                        : Colors.grey,
+                    color: provider.isAutomaticModeEnabled ? Colors.grey : null,
+                  ),
+                ),
+                subtitle: Text(
+                  provider.isAutomaticModeEnabled 
+                      ? 'Controlled automatically'
+                      : (provider.isLightOn ? 'Currently ON' : 'Currently OFF'),
+                  style: TextStyle(
+                    color: provider.isAutomaticModeEnabled 
+                        ? Colors.grey 
+                        : (provider.isLightOn ? AppTheme.successColor : Colors.grey),
                   ),
                 ),
                 secondary: Icon(
-                  Icons.lightbulb,
-                  color: provider.isLightOn 
-                      ? AppTheme.warningColor 
-                      : Colors.grey,
+                  provider.isAutomaticModeEnabled ? Icons.auto_mode : Icons.lightbulb,
+                  color: provider.isAutomaticModeEnabled 
+                      ? Colors.grey 
+                      : (provider.isLightOn ? AppTheme.warningColor : Colors.grey),
                 ),
                 activeColor: AppTheme.warningColor,
               ),
@@ -51,21 +58,39 @@ class DeviceControlsWidget extends StatelessWidget {
             Card(
               child: SwitchListTile.adaptive(
                 value: provider.isFanOn,
-                onChanged: (value) => provider.toggleFan(),
-                title: const Text('Ceiling Fan'),
-                subtitle: Text(
-                  provider.isFanOn ? 'Currently ON' : 'Currently OFF',
+                onChanged: provider.isAutomaticModeEnabled ? null : (value) async {
+                  try {
+                    await provider.toggleFan();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to toggle fan. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                title: Text(
+                  'Ceiling Fan',
                   style: TextStyle(
-                    color: provider.isFanOn 
-                        ? AppTheme.successColor 
-                        : Colors.grey,
+                    color: provider.isAutomaticModeEnabled ? Colors.grey : null,
+                  ),
+                ),
+                subtitle: Text(
+                  provider.isAutomaticModeEnabled 
+                      ? 'Auto: ${provider.roomTemperature.toStringAsFixed(1)}°C > ${provider.automaticFanTemperature.toStringAsFixed(1)}°C'
+                      : (provider.isFanOn ? 'Currently ON' : 'Currently OFF'),
+                  style: TextStyle(
+                    color: provider.isAutomaticModeEnabled 
+                        ? Colors.grey 
+                        : (provider.isFanOn ? AppTheme.successColor : Colors.grey),
                   ),
                 ),
                 secondary: Icon(
-                  Icons.air,
-                  color: provider.isFanOn 
-                      ? AppTheme.primaryColor 
-                      : Colors.grey,
+                  provider.isAutomaticModeEnabled ? Icons.auto_mode : Icons.air,
+                  color: provider.isAutomaticModeEnabled 
+                      ? Colors.grey 
+                      : (provider.isFanOn ? AppTheme.primaryColor : Colors.grey),
                 ),
                 activeColor: AppTheme.primaryColor,
               ),
