@@ -58,16 +58,7 @@ class CameraView extends StatelessWidget {
                 ],
               ),
             ),
-            // Face recognition button
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: FloatingActionButton.small(
-                onPressed: onFaceRecognition,
-                backgroundColor: AppTheme.primaryColor,
-                child: const Icon(Icons.face, color: Colors.white),
-              ),
-            ),
+
             // Recording indicator
             Positioned(
               top: 16,

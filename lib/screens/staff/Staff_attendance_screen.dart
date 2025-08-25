@@ -14,13 +14,18 @@ class _StaffAttendanceScreenState extends State<StaffAttendanceScreen> {
   // Dummy Data (replace with Firebase later)
   final Map<String, List<Map<String, dynamic>>> attendanceData = {
     "2025-08-21": [
-      {"name": "Kritika C.", "rfid": "A1B2C3", "checkIn": "09:10 AM", "status": "Present"},
-      {"name": "Bhavi S.", "rfid": "D4E5F6", "checkIn": "09:25 AM", "status": "Present"},
-      {"name": "Ashok P.", "rfid": "G7H8I9", "checkIn": null, "status": "Absent"},
+      {"name": "Aishwarya", "rfid": "RF001", "checkIn": "09:05 AM", "status": "Present"},
+      {"name": "Deepika", "rfid": "RF002", "checkIn": "09:15 AM", "status": "Present"},
+      {"name": "Kritika", "rfid": "RF003", "checkIn": null, "status": "Absent"},
+      {"name": "Rupesh", "rfid": "RF004", "checkIn": "09:25 AM", "status": "Present"},
+      {"name": "Prasanna", "rfid": "RF005", "checkIn": null, "status": "Absent"},
     ],
     "2025-08-20": [
-      {"name": "Kritika C.", "rfid": "A1B2C3", "checkIn": "09:05 AM", "status": "Present"},
-      {"name": "Bhavi S.", "rfid": "D4E5F6", "checkIn": null, "status": "Absent"},
+      {"name": "Aishwarya", "rfid": "RF001", "checkIn": "09:10 AM", "status": "Present"},
+      {"name": "Deepika", "rfid": "RF002", "checkIn": "09:20 AM", "status": "Present"},
+      {"name": "Kritika", "rfid": "RF003", "checkIn": "09:30 AM", "status": "Present"},
+      {"name": "Rupesh", "rfid": "RF004", "checkIn": null, "status": "Absent"},
+      {"name": "Prasanna", "rfid": "RF005", "checkIn": "09:40 AM", "status": "Present"},
     ],
   };
 
@@ -34,9 +39,9 @@ class _StaffAttendanceScreenState extends State<StaffAttendanceScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Colors.blueAccent, // header background
-              onPrimary: Colors.white, // header text
-              onSurface: Colors.black, // body text
+              primary: Colors.blueAccent,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(foregroundColor: Colors.blueAccent),

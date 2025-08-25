@@ -88,10 +88,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
                   // Camera Section
-                  _buildSectionTitle('Live Camera Feed'),
-                  CameraView(
-                    onFaceRecognition: () => _handleFaceRecognition(provider),
-                  ),
+                  _buildSectionTitle('Live Camera'),
+                  CameraView(),
                   const SizedBox(height: 24),
 
                   // Controls Section (Door + Garbage) in same row
@@ -151,15 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _handleFaceRecognition(OfficeProvider provider) {
-    provider.openDoorWithFaceRecognition();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Face recognized! Door opened.'),
-        backgroundColor: AppTheme.successColor,
-      ),
-    );
-  }
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
