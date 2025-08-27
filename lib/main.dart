@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/home/home_screen.dart';
 import 'providers/office_provider.dart';
+import 'services/firebase_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -17,6 +18,9 @@ void main() async {
       storageBucket: "iotproject-403ba.firebasestorage.app",
     ),
   );
+
+  // Initialize Firebase fields
+  await FirebaseService.initializeFirebaseFields();
 
   runApp(MultiProvider(
     providers: [

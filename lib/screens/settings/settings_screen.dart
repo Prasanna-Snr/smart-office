@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Automatic mode enabled. Fan will turn on when temperature exceeds ${temperature.toStringAsFixed(1)}°C'),
+                                  content: Text('Automatic mode enabled. Lights: Motion control, Fan: Temperature > ${temperature.toStringAsFixed(1)}°C'),
                                   backgroundColor: AppTheme.successColor,
                                 ),
                               );
@@ -93,26 +93,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     subtitle: Text(
                       provider.isAutomaticModeEnabled
-                          ? 'Fan turns on automatically when temperature > ${provider.automaticFanTemperature.toStringAsFixed(1)}°C'
+                          ? 'Lights: Motion sensor control\nFan: Temperature > ${provider.automaticFanTemperature.toStringAsFixed(1)}°C'
                           : 'Manual control of all devices',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,
                       ),
                     ),
-                    secondary: Icon(
-                      provider.isAutomaticModeEnabled 
-                          ? Icons.auto_mode 
-                          : Icons.touch_app,
-                      color: provider.isAutomaticModeEnabled 
-                          ? AppTheme.successColor 
-                          : Colors.grey,
-                    ),
+                    secondary: null,
                     activeColor: AppTheme.primaryColor,
                   ),
                   if (provider.isAutomaticModeEnabled)
                     ListTile(
-                      leading: const Icon(Icons.thermostat, color: AppTheme.primaryColor),
+                      leading: null,
                       title: const Text('Fan Temperature Threshold'),
                       subtitle: Text('${provider.automaticFanTemperature.toStringAsFixed(1)}°C'),
                       trailing: IconButton(

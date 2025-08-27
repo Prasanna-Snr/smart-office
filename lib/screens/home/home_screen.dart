@@ -66,13 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text(AppConstants.appName),
-            actions: [
-              IconButton(
-                onPressed: () => provider.simulateGasDetection(),
-                icon: const Icon(Icons.science),
-                tooltip: 'Simulate Gas Detection',
-              ),
-            ],
+            
+        
           ),
           drawer: _buildDrawer(context),
           body: SafeArea(
@@ -238,6 +233,83 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+  }
+
+  void _showMotionTestDialog(BuildContext context, OfficeProvider provider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Test Motion Sensor'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Current Motion Status: ${provider.motionDetected ? 'DETECTED' : 'NOT DETECTED'}'),
+              const SizedBox(height: 16),
+              const Text('Simulate PIR sensor detection:'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await provider.simulateMotionDetection(true);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Motion DETECTED - Light should turn ON in auto mode'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Detect Motion'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await provider.simulateMotionDetection(false);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Motion CLEARED - Light should turn OFF in auto mode'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Clear Motion'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

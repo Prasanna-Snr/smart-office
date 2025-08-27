@@ -36,13 +36,12 @@ class DoorControlWidget extends StatelessWidget {
                   // ── Header: Icon + Title (like GarbageLevelWidget) ───────────
                   Row(
                     children: [
-                      Icon(
-                        provider.isAutomaticModeEnabled 
-                            ? Icons.auto_mode 
-                            : (isOpen ? Icons.door_front_door : Icons.door_front_door_outlined),
-                        size: 24,
-                        color: statusColor,
-                      ),
+                      if (!provider.isAutomaticModeEnabled)
+                        Icon(
+                          isOpen ? Icons.door_front_door : Icons.door_front_door_outlined,
+                          size: 24,
+                          color: statusColor,
+                        ),
                       const SizedBox(width: 10),
                       Text(
                         'Door Status',

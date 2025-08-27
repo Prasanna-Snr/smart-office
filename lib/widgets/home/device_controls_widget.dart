@@ -36,7 +36,7 @@ class DeviceControlsWidget extends StatelessWidget {
                 ),
                 subtitle: Text(
                   provider.isAutomaticModeEnabled 
-                      ? 'Controlled automatically'
+                      ? 'Auto: Motion ${provider.motionDetected ? 'Detected' : 'Not Detected'}'
                       : (provider.isLightOn ? 'Currently ON' : 'Currently OFF'),
                   style: TextStyle(
                     color: provider.isAutomaticModeEnabled 
@@ -44,11 +44,9 @@ class DeviceControlsWidget extends StatelessWidget {
                         : (provider.isLightOn ? AppTheme.successColor : Colors.grey),
                   ),
                 ),
-                secondary: Icon(
-                  provider.isAutomaticModeEnabled ? Icons.auto_mode : Icons.lightbulb,
-                  color: provider.isAutomaticModeEnabled 
-                      ? Colors.grey 
-                      : (provider.isLightOn ? AppTheme.warningColor : Colors.grey),
+                secondary: provider.isAutomaticModeEnabled ? null : Icon(
+                  Icons.lightbulb,
+                  color: provider.isLightOn ? AppTheme.warningColor : Colors.grey,
                 ),
                 activeColor: AppTheme.warningColor,
               ),
@@ -86,11 +84,9 @@ class DeviceControlsWidget extends StatelessWidget {
                         : (provider.isFanOn ? AppTheme.successColor : Colors.grey),
                   ),
                 ),
-                secondary: Icon(
-                  provider.isAutomaticModeEnabled ? Icons.auto_mode : Icons.air,
-                  color: provider.isAutomaticModeEnabled 
-                      ? Colors.grey 
-                      : (provider.isFanOn ? AppTheme.primaryColor : Colors.grey),
+                secondary: provider.isAutomaticModeEnabled ? null : Icon(
+                  Icons.air,
+                  color: provider.isFanOn ? AppTheme.primaryColor : Colors.grey,
                 ),
                 activeColor: AppTheme.primaryColor,
               ),

@@ -27,6 +27,9 @@ class FirebaseService {
   // Reference to the max temperature for automatic fan control
   static DatabaseReference get maxTempRef => _database.child('max_temp');
 
+  // Reference to the motion status (PIR sensor) in Firebase
+  static DatabaseReference get motionStatusRef => _database.child('motion_status');
+
 
   // ───────────────── LED ─────────────────
   static Future<void> updateLedStatus(bool status) async {
@@ -294,5 +297,55 @@ class FirebaseService {
       }
       return 25.0;
     });
+  }
+
+  // ───────────────── Motion Status (PIR Sensor) ─────────────────
+  static Future<void> updateMotionStatus(bool detected) async {
+    try {
+      await motionStatusRef.set(detected);
+      print('Motion status updated to: $detected');
+    } catch (e) {
+      print('Error updating motion status: $e');
+      throw e;
+    }
+  }
+
+  static Future<bool> getMotionStatus() async {
+    try {
+      final snapshot = await motionStatusRef.get();
+      if (snapshot.exists) {
+        return snapshot.value as bool? ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error getting motion status: $e');
+      return false;
+    }
+  }
+
+  static Stream<bool> motionStatusStream() {
+    return motionStatusRef.onValue.map((event) {
+      if (event.snapshot.exists) {
+        return event.snapshot.value as bool? ?? false;
+      }
+      return false;
+    });
+  }
+
+  // ───────────────── Initialize Firebase Fields ─────────────────
+  static Future<void> initializeFirebaseFields() async {
+    try {
+      // Initialize motion_status if it doesn't exist
+      final motionSnapshot = await motionStatusRef.get();
+      if (!motionSnapshot.exists) {
+        await motionStatusRef.set(false);
+        print('Initialized motion_status field in Firebase');
+      }
+      
+      // You can add other field initializations here if needed
+      print('Firebase fields initialization complete');
+    } catch (e) {
+      print('Error initializing Firebase fields: $e');
+    }
   }
 }

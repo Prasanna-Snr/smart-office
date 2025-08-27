@@ -12,9 +12,11 @@ class OfficeProvider extends ChangeNotifier {
   StreamSubscription<double>? _garbageLevelSubscription;
   StreamSubscription<bool>? _automaticModeSubscription;
   StreamSubscription<double>? _maxTempSubscription;
+  StreamSubscription<bool>? _motionStatusSubscription;
   
   bool _isAutomaticModeEnabled = false;
   double _automaticFanTemperature = 25.0;
+  bool _motionDetected = false;
 
   OfficeState get officeState => _officeState;
 
@@ -27,6 +29,7 @@ class OfficeProvider extends ChangeNotifier {
   double get garbageLevel => _officeState.garbageLevel;
   bool get isAutomaticModeEnabled => _isAutomaticModeEnabled;
   double get automaticFanTemperature => _automaticFanTemperature;
+  bool get motionDetected => _motionDetected;
 
   OfficeProvider() {
     _initializeFirebaseListeners();
@@ -130,6 +133,20 @@ class OfficeProvider extends ChangeNotifier {
         print('Error listening to max temperature: $error');
       },
     );
+
+    // Motion status listener (PIR sensor)
+    _motionStatusSubscription = FirebaseService.motionStatusStream().listen(
+      (bool motionDetected) {
+        if (_motionDetected != motionDetected) {
+          _motionDetected = motionDetected;
+          _checkAutomaticLightControl(motionDetected);
+          notifyListeners();
+        }
+      },
+      onError: (error) {
+        print('Error listening to motion status: $error');
+      },
+    );
   }
 
   // Load initial data from Firebase
@@ -163,8 +180,13 @@ class OfficeProvider extends ChangeNotifier {
       final maxTemp = await FirebaseService.getMaxTemp();
       _automaticFanTemperature = maxTemp;
 
-      // Check automatic fan control after loading all data
+      // Load motion status
+      final motionStatus = await FirebaseService.getMotionStatus();
+      _motionDetected = motionStatus;
+
+      // Check automatic controls after loading all data
       _checkAutomaticFanControl(_officeState.roomTemperature);
+      _checkAutomaticLightControl(_motionDetected);
 
       notifyListeners();
     } catch (e) {
@@ -226,6 +248,17 @@ class OfficeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Method to simulate motion detection for testing
+  Future<void> simulateMotionDetection(bool detected) async {
+    try {
+      await FirebaseService.updateMotionStatus(detected);
+      print('Motion simulation: $detected');
+    } catch (e) {
+      print('Error simulating motion: $e');
+      throw e;
+    }
+  }
+
   void updateTotalUsers(int users) {
     _officeState.totalUsers = users;
     notifyListeners();
@@ -253,8 +286,9 @@ class OfficeProvider extends ChangeNotifier {
       final newMode = !_isAutomaticModeEnabled;
       await FirebaseService.updateAutomaticMode(newMode);
       _isAutomaticModeEnabled = newMode;
-      // Check fan control immediately after toggling automatic mode
+      // Check automatic controls immediately after toggling automatic mode
       _checkAutomaticFanControl(_officeState.roomTemperature);
+      _checkAutomaticLightControl(_motionDetected);
       notifyListeners();
     } catch (e) {
       print('Error toggling automatic mode: $e');
@@ -266,8 +300,9 @@ class OfficeProvider extends ChangeNotifier {
     try {
       await FirebaseService.updateMaxTemp(temperature);
       _automaticFanTemperature = temperature;
-      // Check fan control immediately after setting new temperature
+      // Check automatic controls immediately after setting new temperature
       _checkAutomaticFanControl(_officeState.roomTemperature);
+      _checkAutomaticLightControl(_motionDetected);
       notifyListeners();
     } catch (e) {
       print('Error setting automatic fan temperature: $e');
@@ -288,6 +323,18 @@ class OfficeProvider extends ChangeNotifier {
     }
   }
 
+  void _checkAutomaticLightControl(bool motionDetected) {
+    if (_isAutomaticModeEnabled) {
+      print('Automatic light control check: motion=$motionDetected, currentLightStatus=${_officeState.isLightOn}');
+      
+      if (motionDetected != _officeState.isLightOn) {
+        // Only update if the light state needs to change
+        print('Light state needs to change from ${_officeState.isLightOn} to $motionDetected');
+        toggleLight();
+      }
+    }
+  }
+
 
 
   @override
@@ -299,6 +346,7 @@ class OfficeProvider extends ChangeNotifier {
     _garbageLevelSubscription?.cancel();
     _automaticModeSubscription?.cancel();
     _maxTempSubscription?.cancel();
+    _motionStatusSubscription?.cancel();
     super.dispose();
   }
 }

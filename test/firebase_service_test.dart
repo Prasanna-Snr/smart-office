@@ -8,6 +8,11 @@ void main() {
       expect(FirebaseService.updateLedStatus, isA<Function>());
       expect(FirebaseService.getLedStatus, isA<Function>());
       expect(FirebaseService.ledStatusStream, isA<Function>());
+      
+      // Test motion status methods
+      expect(FirebaseService.updateMotionStatus, isA<Function>());
+      expect(FirebaseService.getMotionStatus, isA<Function>());
+      expect(FirebaseService.motionStatusStream, isA<Function>());
     });
   });
 }
