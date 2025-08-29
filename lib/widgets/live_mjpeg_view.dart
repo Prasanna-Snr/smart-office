@@ -2,36 +2,32 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-
-/// Change this to your ESP32-CAM IP (no http/port here)
-const String camIp = '192.168.1.180/';
-
-/// If you’re using the stock ESP32-CAM WebServer example, the MJPEG URL is:
-///   http://<ip>:81/stream
-const String streamUrl = 'http://$camIp:81/stream';
+import '../services/camera_service.dart';
+import '../core/constants/app_constants.dart';
 
 class LiveMjpegView extends StatefulWidget {
   final double height;
   final BorderRadius? borderRadius;
 
   const LiveMjpegView({
-    Key? key,
+    super.key,
     required this.height,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
-  State<LiveMjpegView> createState() => _LiveMjpegViewState();
+  State<LiveMjpegView> createState() => LiveMjpegViewState();
 }
 
-class _LiveMjpegViewState extends State<LiveMjpegView> {
+class LiveMjpegViewState extends State<LiveMjpegView> {
   final _httpClient = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 6);
+    ..connectionTimeout = AppConstants.cameraConnectionTimeout;
 
   StreamSubscription<List<int>>? _sub;
   Uint8List? _currentFrame;
 
   String _status = 'Connecting...';
+  String _currentUrl = '';
   bool _connecting = true;
   bool _hasError = false;
 
@@ -49,7 +45,7 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
   @override
   void initState() {
     super.initState();
-    _connect();
+    _initializeCamera();
   }
 
   @override
@@ -58,6 +54,20 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
     _sub?.cancel();
     _httpClient.close(force: true);
     super.dispose();
+  }
+
+  Future<void> _initializeCamera() async {
+    // First, try to find a working camera URL
+    final workingUrl = await CameraService.findWorkingCameraUrl();
+    
+    if (workingUrl != null) {
+      _currentUrl = workingUrl;
+      _connect();
+    } else {
+      // Fallback to configured URL even if test failed
+      _currentUrl = await CameraService.getCameraStreamUrl();
+      _connect();
+    }
   }
 
   void _setStatus(String s, {bool error = false}) {
@@ -73,13 +83,18 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
     setState(() {
       _connecting = true;
       _hasError = false;
-      _status = 'Connecting to $streamUrl ...';
+      _status = 'Connecting to camera...';
       _buf.clear();
       _inFrame = false;
     });
 
+    if (_currentUrl.isEmpty) {
+      _setStatus('Camera URL not available', error: true);
+      return;
+    }
+
     try {
-      final uri = Uri.parse(streamUrl);
+      final uri = Uri.parse(_currentUrl);
       final req = await _httpClient.getUrl(uri);
       final res = await req.close();
 
@@ -93,9 +108,9 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
       _connecting = false;
 
       // Safety watchdog: if no bytes for 5s, reconnect.
-      _watchdog = Timer.periodic(const Duration(seconds: 5), (_) {
+      _watchdog = Timer.periodic(AppConstants.cameraWatchdogInterval, (_) {
         if (_currentFrame == null) {
-          _setStatus('No frames yet… retrying', error: true);
+          _setStatus('No frames received, retrying...', error: true);
           _reconnect();
         }
       });
@@ -125,7 +140,7 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
   }
 
   void _scheduleReconnect() {
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(AppConstants.cameraReconnectDelay, () {
       if (mounted) _reconnect();
     });
   }
@@ -166,6 +181,11 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
     }
   }
 
+  // Method to refresh camera connection with new settings
+  void refreshConnection() {
+    _initializeCamera();
+  }
+
   @override
   Widget build(BuildContext context) {
     final radius = widget.borderRadius ?? BorderRadius.circular(20);
@@ -189,19 +209,46 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
             Positioned(
               left: 12,
               top: 12,
-              child: _livePill(_connecting ? 'LIVE (connecting)' : 'LIVE'),
+              child: _livePill(_connecting ? 'CONNECTING' : 'LIVE'),
             ),
             if (_hasError || _currentFrame == null)
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(
-                    _status,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _status,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (_hasError) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to retry connection',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            // Tap to retry when there's an error
+            if (_hasError)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => _initializeCamera(),
+                  child: Container(
+                    color: Colors.transparent,
                   ),
                 ),
               ),
@@ -223,6 +270,7 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
   }
 
   Widget _livePill(String text) {
+    final isConnecting = text == 'CONNECTING';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -230,19 +278,25 @@ class _LiveMjpegViewState extends State<LiveMjpegView> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: isConnecting ? Colors.orange : Colors.green,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 6),
-          Text(text,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );

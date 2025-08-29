@@ -30,6 +30,9 @@ class FirebaseService {
   // Reference to the motion status (PIR sensor) in Firebase
   static DatabaseReference get motionStatusRef => _database.child('motion_status');
 
+  // Reference to the gas status in Firebase
+  static DatabaseReference get gasStatusRef => _database.child('gasStatus');
+
 
   // ───────────────── LED ─────────────────
   static Future<void> updateLedStatus(bool status) async {
@@ -342,7 +345,55 @@ class FirebaseService {
         print('Initialized motion_status field in Firebase');
       }
       
-      // You can add other field initializations here if needed
+      // Initialize other fields if needed
+      final ledSnapshot = await ledStatusRef.get();
+      if (!ledSnapshot.exists) {
+        await ledStatusRef.set(false);
+        print('Initialized led_status field in Firebase');
+      }
+      
+      final fanSnapshot = await fanStatusRef.get();
+      if (!fanSnapshot.exists) {
+        await fanStatusRef.set(false);
+        print('Initialized fan_status field in Firebase');
+      }
+      
+      final doorSnapshot = await doorStatusRef.get();
+      if (!doorSnapshot.exists) {
+        await doorStatusRef.set(false);
+        print('Initialized door_status field in Firebase');
+      }
+      
+      final tempSnapshot = await temperatureRef.get();
+      if (!tempSnapshot.exists) {
+        await temperatureRef.set(22.0);
+        print('Initialized temperature field in Firebase');
+      }
+      
+      final humiditySnapshot = await humidityRef.get();
+      if (!humiditySnapshot.exists) {
+        await humidityRef.set(50.0);
+        print('Initialized humidity field in Firebase');
+      }
+      
+      final garbageSnapshot = await garbageLevelRef.get();
+      if (!garbageSnapshot.exists) {
+        await garbageLevelRef.set(45.0);
+        print('Initialized garbage_level field in Firebase');
+      }
+      
+      final autoModeSnapshot = await automaticModeRef.get();
+      if (!autoModeSnapshot.exists) {
+        await automaticModeRef.set(false);
+        print('Initialized automatic_mode field in Firebase');
+      }
+      
+      final maxTempSnapshot = await maxTempRef.get();
+      if (!maxTempSnapshot.exists) {
+        await maxTempRef.set(25.0);
+        print('Initialized max_temp field in Firebase');
+      }
+      
       print('Firebase fields initialization complete');
     } catch (e) {
       print('Error initializing Firebase fields: $e');

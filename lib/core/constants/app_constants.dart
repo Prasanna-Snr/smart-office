@@ -34,4 +34,18 @@ class AppConstants {
 
   // 🔹 Dashboard card size (add this)
   static const double dashboardCardHeight = 220.0;
+
+  // Camera Configuration
+  static const String defaultLocalCameraIp = '192.168.1.144';
+  static const int defaultCameraPort = 81;
+  static const String defaultCameraPath = '/stream';
+  
+  // Remote access options
+  static const String defaultPublicCameraUrl = ''; // To be configured
+  static const String defaultDdnsHostname = ''; // Dynamic DNS hostname
+  
+  // Camera connection timeouts
+  static const Duration cameraConnectionTimeout = Duration(seconds: 6);
+  static const Duration cameraReconnectDelay = Duration(seconds: 2);
+  static const Duration cameraWatchdogInterval = Duration(seconds: 5);
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/office_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -39,9 +40,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Appearance Section
+              _buildSectionCard(
+                title: 'Appearance',
+                children: [
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, child) {
+                      return SwitchListTile.adaptive(
+                        value: themeProvider.isDarkMode,
+                        onChanged: (value) {
+                          themeProvider.toggleTheme();
+                        },
+                        title: const Text(
+                          'Dark Mode',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(
+                          themeProvider.isDarkMode ? 'Dark theme enabled' : 'Light theme enabled',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        secondary: Icon(
+                          themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                          color: AppTheme.primaryColor,
+                        ),
+                        activeColor: AppTheme.primaryColor,
+                      );
+                    },
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
               // Mode Section
               _buildSectionCard(
-                title: 'Mode',
+                title: 'Automation',
                 children: [
                   SwitchListTile.adaptive(
                     value: provider.isAutomaticModeEnabled,

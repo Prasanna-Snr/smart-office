@@ -5,7 +5,6 @@ import '../../models/user_model.dart';
 import '../../theme/app_theme.dart';
 import '../../services/face_lock_service.dart';
 import '../../widgets/common/status_indicator.dart';
-import '../../widgets/common/loading_button.dart';
 import '../../widgets/user_management/user_list_item.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -31,7 +30,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<void> _checkServerAndLoadUsers() async {
     final serverStatus = await FaceLockService.checkServerStatus();
     setState(() => _isServerOnline = serverStatus);
-    
+
     if (serverStatus) {
       _loadUsers();
     } else {
@@ -43,9 +42,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<void> _loadUsers() async {
     try {
       setState(() => _isLoading = true);
-      
+
       final apiUsers = await FaceLockService.getAllUsers();
-      
+
       setState(() {
         _users = apiUsers.map((userData) => User.fromJson(userData)).toList();
         _isLoading = false;
@@ -80,7 +79,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             // Action Buttons
             _buildActionButtons(),
             const SizedBox(height: 16),
-            
+
             // Users List
             Expanded(
               child: _buildUsersList(),
@@ -96,25 +95,35 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       children: [
         SizedBox(
           width: double.infinity,
-          child: LoadingButton(
-            isLoading: false,
+          child: FilledButton.icon(
             onPressed: _isServerOnline ? _showAddUserDialog : null,
-            text: _isServerOnline ? 'Take Photo & Add User' : 'Server Offline',
-            icon: Icons.camera_alt,
-            backgroundColor: _isServerOnline ? AppTheme.primaryColor : Colors.grey,
-            foregroundColor: Colors.white,
+            icon: const Icon(Icons.camera_alt),
+            label: Text(_isServerOnline ? 'Take Photo & Add User' : 'Server Offline'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _isServerOnline ? AppTheme.primaryColor : Colors.grey,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
-          child: LoadingButton(
-            isLoading: false,
+          child: FilledButton.icon(
             onPressed: _isServerOnline ? _verifyFace : null,
-            text: _isServerOnline ? 'Verify Face' : 'Server Offline',
-            icon: Icons.face,
-            backgroundColor: _isServerOnline ? AppTheme.successColor : Colors.grey,
-            foregroundColor: Colors.white,
+            icon: const Icon(Icons.face),
+            label: Text(_isServerOnline ? 'Verify Face' : 'Server Offline'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _isServerOnline ? AppTheme.successColor : Colors.grey,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
           ),
         ),
       ],
@@ -125,7 +134,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_users.isEmpty) {
       return const Center(
         child: Text(
@@ -135,7 +144,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: _loadUsers,
       child: ListView.builder(
@@ -160,7 +169,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         maxWidth: AppConstants.maxImageDimension,
         maxHeight: AppConstants.maxImageDimension,
       );
-      
+
       if (image != null) {
         _showNameInputDialog(File(image.path));
       }
@@ -274,13 +283,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Future<void> _addUserWithPhoto(String name, File imageFile) async {
     _showLoadingDialog('Registering user...');
-    
+
     try {
       await FaceLockService.registerUser(
         username: name,
         imageFile: imageFile,
       );
-      
+
       _closeLoadingDialog();
       _showSuccessSnackBar('User "$name" registered successfully!');
       await _loadUsers();
@@ -297,14 +306,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
 
     _showLoadingDialog('Updating user name...');
-    
+
     try {
       await FaceLockService.updateUserName(
         oldUsername: user.name,
         newUsername: newName,
         imageBase64: user.imageBase64!,
       );
-      
+
       _closeLoadingDialog();
       _showSuccessSnackBar('User name updated successfully!');
       await _loadUsers();
@@ -353,14 +362,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         maxWidth: AppConstants.maxImageDimension,
         maxHeight: AppConstants.maxImageDimension,
       );
-      
+
       if (image != null) {
         _showLoadingDialog('Verifying face...');
-        
+
         final result = await FaceLockService.verifyFace(File(image.path));
-        
+
         _closeLoadingDialog();
-        
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(

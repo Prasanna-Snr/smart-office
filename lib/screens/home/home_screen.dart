@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/office_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/camera_view.dart';
 import '../../widgets/gas_detector.dart';
 import '../../widgets/home/door_control_widget.dart';
@@ -151,37 +152,42 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(
-                  Icons.business,
-                  size: 48,
-                  color: Colors.white,
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return DrawerHeader(
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryColor,
                 ),
-                SizedBox(height: 8),
-                Text(
-                  AppConstants.appName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Icon(
+                      Icons.business,
+                      size: 48,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      AppConstants.appName,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      authProvider.userData?.displayName ?? 
+                      authProvider.user?.email ?? 'Admin Panel',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Admin Panel',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.dashboard),
@@ -196,14 +202,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
             leading: const Icon(Icons.access_time),
             title: const Text('Staff Attendance'),
-            onTap: () => _navigateToStaffAttendance(), // Create this function
+            onTap: () => _navigateToStaffAttendance(),
           ),
-
           const Divider(),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
             onTap: () => _navigateToSettings(),
+          ),
+          const Divider(),
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () => _showSignOutDialog(context, authProvider),
+              );
+            },
           ),
         ],
       ),
@@ -233,6 +251,42 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+  }
+
+  void _showSignOutDialog(BuildContext context, AuthProvider authProvider) {
+    Navigator.pop(context); // Close drawer first
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await authProvider.signOut();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Signed out successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
